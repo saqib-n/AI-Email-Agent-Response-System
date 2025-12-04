@@ -1,0 +1,603 @@
+{
+  "name": "AI Email Agent Booking and Response System",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "28155338-c0ab-41bb-9170-26679363a0c4",
+              "name": "n8n_slack_channel",
+              "value": "C09TR40B14J",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -688,
+        336
+      ],
+      "id": "bbf5db54-6625-41ab-badc-946864cde717",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e42d8bfd-9bc6-414b-bed6-b395b788bb4c",
+              "leftValue": "={{ $('Gmail Trigger1').item.json.from.value[0].address }}",
+              "rightValue": "wolfxense.agency",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -448,
+        336
+      ],
+      "id": "7828e987-2807-4271-87d8-785137cea394",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $('Gmail Trigger1').item.json.text }}",
+        "options": {
+          "categories": "Positive, Neutral, Negative, Important"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.sentimentAnalysis",
+      "typeVersion": 1.1,
+      "position": [
+        -16,
+        688
+      ],
+      "id": "72bb325b-0951-46fe-901d-e3d00da9d0d9",
+      "name": "Sentiment Analysis"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        0,
+        272
+      ],
+      "id": "1b168ff7-93fd-4c87-acec-f544f29a0b5b",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QLnvyUHfmcKDPMyY",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Gmail Trigger1').item.json.headers.received }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        48,
+        496
+      ],
+      "id": "9c020832-e62f-4d0d-8bf7-38582049a4a5",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -928,
+        336
+      ],
+      "id": "3f126ab9-c1cd-41a5-88a5-d43fc669b6d1",
+      "name": "Gmail Trigger1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "d9fDJxDabeVZF1s5",
+          "name": "Gmail account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        1024
+      ],
+      "id": "1177c2af-1eeb-4795-a925-fe99e0b598e3",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QLnvyUHfmcKDPMyY",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Review this AI-generated email response for quality and brand alignment:\n\n**Original Email:**\nFrom: {{ $('Gmail Trigger1').item.json.from.value[0].address }}\nSubject: {{ $(\"Gmail Trigger1\").item.json.subject }}\nMessage:  {{ $(\"Gmail Trigger1\").item.json.html }}\n\n**AI Response:**\nSubject: {{ $json.output.subject }}\nContent: {{ $json.output.content }}\n\nEvaluate the response and provide your assessment.\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "# Role\n\nYou are a Quality Assurance (QA) Agent for WolfXense AI. Your specific task is to review AI-generated responses to website inquiries to ensure they meet the highest standards before being sent to potential clients.\n\n# Evaluation Criteria\n\nPlease review the response based on the following five pillars:\n\n1.  **Accuracy**: Does the response correctly address the specific inquiry? Does it distinguish correctly between our *Education* services (training/coaching) and our *Development* services (building agents/workflows)?\n2.  **Tone**: Is the tone professional, encouraging, and knowledgeable? (It should sound like an expert partner who empowers the client, not just a generic support bot).\n3.  **Completeness**: Did the AI answer *all* parts of the user's question? Did it provide a clear next step (e.g., \"Book a Discovery Call\" or \"Email us\")?\n4.  **Grammar & Clarity**: Is the writing error-free, concise, and easy for a non-technical business owner to understand?\n5.  **Brand Alignment**: Does the response reflect WolfXense values?\n    *   *Hybrid Approach:* Does it respect that we both **teach** and **build**?\n    *   *Practicality:* Does it focus on real-world business impact rather than hype?\n\n# Output Format\n\nProvide a quality score (1-10) and an approval decision.\n\n*   **Status:** [APPROVED / REJECTED]\n*   **Score:** [1-10]\n*   **Feedback:** (If rejected, explain exactly what needs to be changed to fit the WolfXense voice)."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        496,
+        16
+      ],
+      "id": "bd0f2e13-b42c-4e6b-a72c-ea1c007c880e",
+      "name": "Quality Review Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        496,
+        272
+      ],
+      "id": "998faffe-5bb8-460b-b04d-d83fce87b661",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QLnvyUHfmcKDPMyY",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"subject\": \"Re: Process to develop an AI Agent\",\n\t\"content\": \"<html><body><p>Hi Sang,</p><p>Thank you for your interest in building an AI Agent with us. Below is a brief overview of the process we follow to design, develop, test, and launch a custom AI Agent for your business.</p><p><strong>1. Introductory Call</strong><br>We start with a short call to understand your goals, current workflows, and the specific problems you want the agent to solve — for example, lead qualification, appointment scheduling, or customer support. This helps us define success metrics and the agent’s scope.</p><p><strong>2. Discovery & Requirements</strong><br>In the discovery phase we map the user journeys, identify integration points (CRM, calendar, ticketing), and collect any knowledge bases or FAQs the agent will need. We also decide voice or chat interfaces and outline privacy and data handling requirements.</p><p><strong>3. Design & Prompting</strong><br>Our team crafts the conversation flows, prompts, and fallback responses. We design the agent’s tone and personality so it reflects your brand while staying helpful and clear. This stage includes sample dialogues to validate expectations.</p><p>If you’d like, we can schedule a discovery call to discuss how an AI Agent could save time and increase conversions for your team.</p><p>Best regards,<br>Team</p></body></html>\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        144,
+        368
+      ],
+      "id": "54d7708c-221a-4b93-b70b-a03221112322",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"approved\": \"true\",\n  \"qualityScore\": 8,\n  \"feedback\": \"Response is accurate, professional, and addresses all points. Minor suggestion: add more specific timeline details.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        640,
+        336
+      ],
+      "id": "0c7094b9-806d-45cc-bae9-430130dc8dde",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "05faf2bf-dabd-42bd-9041-a6ee85452238",
+              "leftValue": "={{ $json.output.approved }}",
+              "rightValue": "APPROVED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "79763869-a4c5-418d-bc4e-71a37426dab4",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        832,
+        16
+      ],
+      "id": "4929c7b0-68af-4f1c-be66-6697ad95f65c",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger1').item.json.id }}",
+        "message": "={{ $('Manage and Write Email Request').item.json.output.content }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1232,
+        0
+      ],
+      "id": "b2e481a1-1d10-4913-848e-5ea765db8afd",
+      "name": "Reply to a message",
+      "webhookId": "9e56e503-8817-4fba-a2ea-8e818066d780",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "d9fDJxDabeVZF1s5",
+          "name": "Gmail account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Email from: {{ $('Gmail Trigger1').item.json.from.value[0].address }}\n\nSubject:{{ $('Gmail Trigger1').item.json.subject }}\n\nMessage:{{ $('Gmail Trigger1').item.json.textAsHtml }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "# Role\n\nYou are a helpful customer support agent for WolfXense AI. Your role is to respond to website inquiries professionally and helpfully.\n- https://www.wolfxense.agency/ is the website of WolfXense AI.\n\n# Key information:\n\n### Company Overview\n\n* Name: WolfXense AI\n* Founder: Saqib Malik (Data Science & AI Automation Specialist)\n* Core offering: A hybrid agency providing both **AI Education/Training** and **Custom AI Solutions Development**.\n* Mission: To make AI practical, simple, and impactful by bridging the gap between learning AI and building with AI.\n* Our email: ai@wolfxense.agency\n\n---\n\n### Solutions / Services\n\nWolfXense operates on two main pillars:\n\n**1. AI Education & Training (Empowerment)**\n*   **AI for Business Growth:** Strategic training on leveraging AI to expand business operations.\n*   **Technical Skills:** Python Programming & Prompt Engineering training.\n*   **Advanced Upskilling:** Teaching teams how to build their own AI Agents, Chatbots, and Automations.\n*   *Format:* One-on-one coaching and team sessions for internal upskilling.\n\n**2. AI Solutions Development (Execution)**\n*   **AI Automation Workflows:** Custom systems to streamline operations and eliminate repetitive tasks.\n*   **Custom AI Agents & Chatbots:** Intelligent agents tailored for business-specific goals (e.g., customer service, internal queries).\n*   **RAG Systems (Retrieval-Augmented Generation):** Advanced systems that allow AI to \"read\" and answer questions from private business data securely.\n*   **Browser Automation & Content Gen:** Tools to automate web tasks and produce content at scale.\n\n---\n\n### Key Benefits Provided\n\n*   **Dual Approach:** Unlike most agencies that just sell a tool, WolfXense ensures the client's team actually knows how to use it (Education + Build).\n*   **Complexity into Clarity:** We take confusing tech concepts and make them practical and usable for non-technical business owners.\n*   **24/7 Efficiency:** Our custom development solutions work around the clock to handle heavy lifting.\n*   **Future-Proofing:** By training your team in Python and AI, we aren't just solving today's problem; we are preparing your workforce for the future.\n\n---\n\n### Why Clients Choose WolfXense (vs typical agencies)\n\n*   **Founder-Led Expertise:** Led by Saqib Malik, ensuring high-level data science expertise rather than generic \"wrapper\" solutions.\n*   **Tailored Curriculum:** Education is not a pre-recorded course; it is curriculum design mapped to the client's specific domain and skill level.\n*   **Real-World Application:** Training includes projects and exercises directly related to the client's actual business data.\n*   **End-to-End Partnership:** We handle the \"Strategy & Roadmap\" before we ever write a line of code or teach a lesson.\n\n---\n\n### How the Process Works\n\n1.  **Discovery:** We understand your goals, workflows, constraints, and success criteria.\n2.  **Strategy & Roadmap:** We align on priorities and choose a path (Education, Development, or Both).\n3.  **Path A (Education):** Curriculum Design -> Delivery (Live coaching/workshops) -> Real-World Application.\n4.  **Path B (Development):** Build (Custom agents/workflows) -> Test & Launch -> Optimize (Iteration & Scaling).\n\n---\n\n### Use-Cases & Applications\n\n*   **Corporate Upskilling:** Teams that need to learn Prompt Engineering or Python to stop relying on external vendors.\n*   **Operational Efficiency:** Businesses drowning in manual data entry or repetitive web tasks (Browser Automation).\n*   **Knowledge Management:** Companies with vast internal documents who need a \"Chat with your Data\" (RAG) system.\n*   **Customer Experience:** Businesses needing intelligent, 24/7 chatbots that go beyond simple scripts.\n\n---\n\n## Key Value Propositions for the Agent to Reference\n\nWhen interacting with prospects or clients, the agent (knowledge base) should emphasize:\n\n*   **The \"Hybrid\" Advantage:** We can build it for you, OR teach you how to build it yourself.\n*   **Customization:** No cookie-cutter solutions; everything from the syllabus to the code is tailored.\n*   **Practicality:** We focus on \"Real-World Application,\" not abstract theory.\n*   **Strategic Growth:** We don't just automate; we audit and strategize for growth.\n\n# Rules\n\nWhen responding:\n1.  Be friendly, professional, and encouraging (reflecting the \"empowerment\" brand voice).\n2.  Answer questions about features, pricing (consultation based), and implementation.\n3.  Provide relevant links (e.g., to the \"Services\" or \"Contact\" section) when helpful.\n4.  If you don't know something, offer to connect them directly with the team via email.\n5.  Be aware that the user's message might contain a quote or reply from the previous message.\n6.  Return the message in HTML template, and use \"WolfXense Team\" when replying."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        0,
+        16
+      ],
+      "id": "310c41a7-6dad-4f63-9c06-00ab6fc5136f",
+      "name": "Manage and Write Email Request"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('If').item.json.n8n_slack_channel }}",
+          "mode": "id"
+        },
+        "text": "=⚠️ *Negative Sentiment Detected*\n\n*From:* {{ $('Gmail Trigger1').item.json.from.value[0].address }}\n\n*Subject:* {{ $('Gmail Trigger1').item.json.headers.subject }}\n\n_AI response will be reviewed before sending._",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        736
+      ],
+      "id": "1cdf69b7-57b3-4c2f-b5f0-6a2d6c730797",
+      "name": "Alert WX - Negative Sentiment",
+      "webhookId": "ea43590c-b26b-4ff0-88e7-f163243c5041",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "fVG67PxrOXW5dARK",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('If').item.json.n8n_slack_channel }}",
+          "mode": "id"
+        },
+        "text": "=🚨 *High Priority Email Received*\n\n*From:* {{ $('Gmail Trigger1').item.json.from.value[0].address }}\n*Subject:* {{ $('Gmail Trigger1').item.json.headers.subject }}\n\n*Preview:* {{\n  $('Gmail Trigger1').item.json.text\n    ? $('Gmail Trigger1').item.json.text.substring(0, 50) + ' ... ' + $('Gmail Trigger1').item.json.text.substring($('Gmail Trigger1').item.json.text.length - 50)\n    : ''\n}}\n\n_This email requires immediate attention._",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        976
+      ],
+      "id": "a04a7646-81b6-473e-87e4-5676690cd7cc",
+      "name": "Alert WX - High Priority",
+      "webhookId": "ea43590c-b26b-4ff0-88e7-f163243c5041",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "fVG67PxrOXW5dARK",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 496,
+        "width": 768,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1008,
+        128
+      ],
+      "typeVersion": 1,
+      "id": "9de3d1af-27ea-405d-b8d5-c5dafcffac70",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 496,
+        "width": 1088,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -112,
+        672
+      ],
+      "typeVersion": 1,
+      "id": "a83c25a4-7232-4e7b-8671-71beb42d9aca",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 640,
+        "width": 352,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -64,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "5683ffa8-6b45-498a-9261-992a9f835417",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 560,
+        "width": 864,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        400,
+        -80
+      ],
+      "typeVersion": 1,
+      "id": "01966786-dd15-4b79-ae60-32b97923c93a",
+      "name": "Sticky Note4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Sentiment Analysis",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Manage and Write Email Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Sentiment Analysis": {
+      "main": [
+        [],
+        [],
+        [
+          {
+            "node": "Alert WX - Negative Sentiment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert WX - High Priority",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Manage and Write Email Request",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Manage and Write Email Request",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Sentiment Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Quality Review Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Manage and Write Email Request",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Quality Review Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quality Review Agent": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Manage and Write Email Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manage and Write Email Request": {
+      "main": [
+        [
+          {
+            "node": "Quality Review Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b4796b6d-2406-4ff7-bc43-19b86504bdd7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ac54dbbad1137090370312954037beb22e9ce6a5abb0eea080a6f19163dbc989"
+  },
+  "id": "h6HhnEp6bbpFqcPK",
+  "tags": []
+}
