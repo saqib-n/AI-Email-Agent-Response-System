@@ -1,5 +1,7 @@
 # 📧 AI Agentic Email Response System
 
+       An Agentic Email Response System built in n8n. Features a multi-agent loop where one AI drafts the reply and another performs Quality Assurance (QA) before sending. Includes sentiment analysis for Slack alerts.    
+
 ![n8n](https://img.shields.io/badge/Workflow-n8n-FF6584?style=for-the-badge&logo=n8n&logoColor=white)
 ![Gemini](https://img.shields.io/badge/AI_Model-Google_Gemini-8E75B2?style=for-the-badge&logo=google-gemini&logoColor=white)
 ![Gmail](https://img.shields.io/badge/Integration-Gmail-EA4335?style=for-the-badge&logo=gmail&logoColor=white)
